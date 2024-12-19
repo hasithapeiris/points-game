@@ -6,7 +6,7 @@ const inSchema = mongoose.Schema(
       type: Number,
       required: true,
     },
-    player: {
+    playerId: {
       type: String,
     },
   },
