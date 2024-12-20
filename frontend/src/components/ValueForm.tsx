@@ -4,96 +4,92 @@ import { BASE_URL } from "../constants";
 
 const ValueForm: React.FC = () => {
   const [value, setValue] = useState<number | "">("");
-  const [isDisabled, setIsDisabled] = useState(false);
-  const [timer, setTimer] = useState<number>(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
+  const [timer, setTimer] = useState(0);
 
-  // Handle countdown for re-enabling buttons
-  useEffect(() => {
-    if (timer > 0) {
-      const interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
-      return () => clearInterval(interval);
-    } else {
-      setIsDisabled(false);
-    }
-  }, [timer]);
+  const handleSubmit = async (submissionType: "in" | "out") => {
+    if (isSubmitting) return;
 
-  // Handlers for submitting data to APIs
-  const handleSubmit = async (type: "in" | "out") => {
-    if (value === "") {
-      alert("Please enter a value before submitting.");
+    if (!value) {
+      alert("Please enter a value.");
       return;
     }
 
+    setIsSubmitting(true);
+    setMessage("");
+    const delay = 60; // 1 minute delay
+
     try {
       const url =
-        type === "in" ? `${BASE_URL}/api/ins` : `${BASE_URL}/api/outs`;
+        submissionType === "in"
+          ? `${BASE_URL}/api/ins`
+          : `${BASE_URL}/api/outs`;
       const playerId = "examplePlayerId";
 
-      const response = await axios.post(url, {
+      // Submit the value to the respective schema API
+      await axios.post(url, {
         value,
         playerId,
       });
 
-      alert(`${type === "in" ? "In" : "Out"} submission successful!`);
-      console.log(response.data);
-
-      // Reset the input field and start the timer
-      setValue("");
-      setIsDisabled(true);
-      setTimer(60);
+      // Call the "check-result" API
+      const response = await axios.post(`${BASE_URL}/api/check-result`, {
+        submissionType,
+      });
+      setMessage(response.data.message);
     } catch (error) {
-      console.error("Error submitting data:", error);
-      alert("Failed to submit the data.");
+      console.error("Error during submission or result check:", error);
+      setMessage("An error occurred. Please try again.");
+    } finally {
+      setValue("");
+      setTimer(delay);
+      setIsSubmitting(false);
+
+      // Start countdown
+      const interval = setInterval(() => {
+        setTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white p-6 rounded shadow-md w-80">
-        <h1 className="text-2xl font-semibold text-center mb-4">
-          Submit Value
-        </h1>
-        <input
-          type="number"
-          className="w-full px-4 py-2 border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Enter a value"
-          value={value}
-          onChange={(e) =>
-            setValue(e.target.value === "" ? "" : Number(e.target.value))
-          }
-          disabled={isDisabled}
-        />
-        <div className="flex justify-between">
-          <button
-            onClick={() => handleSubmit("in")}
-            className={`px-4 py-2 rounded transition-all ${
-              isDisabled
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-blue-500 hover:bg-blue-600 text-white"
-            }`}
-            disabled={isDisabled}
-          >
-            In
-          </button>
-          <button
-            onClick={() => handleSubmit("out")}
-            className={`px-4 py-2 rounded transition-all ${
-              isDisabled
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-red-500 hover:bg-red-600 text-white"
-            }`}
-            disabled={isDisabled}
-          >
-            Out
-          </button>
-        </div>
-        {isDisabled && (
-          <div className="text-center mt-4 text-sm text-gray-500">
-            Please wait for <span className="font-bold">{timer}s</span> to
-            submit again.
-          </div>
-        )}
+    <div className="flex flex-col items-center p-4">
+      <h1 className="text-2xl font-bold mb-4">Submission Form</h1>
+      <input
+        type="number"
+        className="p-2 border border-gray-300 rounded mb-4 w-64"
+        placeholder="Enter a value"
+        value={value}
+        onChange={(e) => setValue(Number(e.target.value))}
+        disabled={isSubmitting || timer > 0}
+      />
+      <div className="flex gap-4 mb-4">
+        <button
+          onClick={() => handleSubmit("in")}
+          className="bg-blue-500 text-white py-2 px-4 rounded disabled:opacity-50"
+          disabled={isSubmitting || timer > 0}
+        >
+          In
+        </button>
+        <button
+          onClick={() => handleSubmit("out")}
+          className="bg-red-500 text-white py-2 px-4 rounded disabled:opacity-50"
+          disabled={isSubmitting || timer > 0}
+        >
+          Out
+        </button>
       </div>
+      {timer > 0 && (
+        <p className="text-gray-500">Wait {timer} seconds to submit again.</p>
+      )}
+      {message && <p className="text-lg font-semibold mt-4">{message}</p>}
     </div>
   );
 };
