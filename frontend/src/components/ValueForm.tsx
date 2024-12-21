@@ -18,6 +18,7 @@ const ValueForm: React.FC = () => {
     totalIn: number;
     totalOut: number;
   } | null>(null);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   // Fetch the global timer state periodically
   useEffect(() => {
@@ -35,21 +36,33 @@ const ValueForm: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch results during the results phase
+  // Fetch results during the results phase and reset when phase changes
   useEffect(() => {
+    let interval = null;
+
     const fetchResults = async () => {
-      if (timerState.phase === "results" && !results) {
-        try {
-          const response = await axios.get(`${BASE_URL}/api/results`);
-          setResults(response.data);
-        } catch (error) {
-          console.error("Error fetching results:", error);
-        }
+      try {
+        const response = await axios.get(`${BASE_URL}/api/results`);
+        setResults(response.data);
+        setIsSubmitted(false);
+      } catch (error) {
+        console.error("Error fetching results:", error);
       }
     };
 
-    fetchResults();
-  }, [timerState.phase, results]);
+    if (timerState.phase === "results") {
+      // Poll results every second during the results phase
+      fetchResults(); // Initial fetch
+      interval = setInterval(fetchResults, 1000);
+    } else {
+      // Reset results when transitioning out of the results phase
+      setResults(null);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [timerState.phase]);
 
   const handleSubmit = async (submissionType: "in" | "out") => {
     if (timerState.phase !== "submission") {
@@ -75,6 +88,7 @@ const ValueForm: React.FC = () => {
         playerId,
       });
       alert(`Submitted ${value} as ${submissionType.toUpperCase()}`);
+      setIsSubmitted(true);
     } catch (error) {
       console.error("Error during submission:", error);
       alert("An error occurred. Please try again.");
@@ -103,19 +117,20 @@ const ValueForm: React.FC = () => {
             placeholder="Enter a value"
             value={value}
             onChange={(e) => setValue(Number(e.target.value))}
+            disabled={isSubmitted}
           />
           <div className="flex gap-4 mb-4">
             <button
               onClick={() => handleSubmit("in")}
               className="bg-blue-500 text-white py-2 px-4 rounded disabled:opacity-50"
-              disabled={timerState.phase !== "submission"}
+              disabled={timerState.phase !== "submission" || isSubmitted}
             >
               In
             </button>
             <button
               onClick={() => handleSubmit("out")}
               className="bg-red-500 text-white py-2 px-4 rounded disabled:opacity-50"
-              disabled={timerState.phase !== "submission"}
+              disabled={timerState.phase !== "submission" || isSubmitted}
             >
               Out
             </button>
