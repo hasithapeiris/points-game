@@ -18,7 +18,6 @@ const ValueForm: React.FC = () => {
     totalIn: number;
     totalOut: number;
   } | null>(null);
-  const [isSubmitted, setIsSubmitted] = useState(false);
 
   // Fetch the global timer state periodically
   useEffect(() => {
@@ -44,7 +43,6 @@ const ValueForm: React.FC = () => {
       try {
         const response = await axios.get(`${BASE_URL}/api/results`);
         setResults(response.data);
-        setIsSubmitted(false);
       } catch (error) {
         console.error("Error fetching results:", error);
       }
@@ -88,7 +86,6 @@ const ValueForm: React.FC = () => {
         playerId,
       });
       alert(`Submitted ${value} as ${submissionType.toUpperCase()}`);
-      setIsSubmitted(true);
     } catch (error) {
       console.error("Error during submission:", error);
       alert("An error occurred. Please try again.");
@@ -117,20 +114,19 @@ const ValueForm: React.FC = () => {
             placeholder="Enter a value"
             value={value}
             onChange={(e) => setValue(Number(e.target.value))}
-            disabled={isSubmitted}
           />
           <div className="flex gap-4 mb-4">
             <button
               onClick={() => handleSubmit("in")}
               className="bg-blue-500 text-white py-2 px-4 rounded disabled:opacity-50"
-              disabled={timerState.phase !== "submission" || isSubmitted}
+              disabled={timerState.phase !== "submission"}
             >
               In
             </button>
             <button
               onClick={() => handleSubmit("out")}
               className="bg-red-500 text-white py-2 px-4 rounded disabled:opacity-50"
-              disabled={timerState.phase !== "submission" || isSubmitted}
+              disabled={timerState.phase !== "submission"}
             >
               Out
             </button>
