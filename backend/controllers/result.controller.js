@@ -41,3 +41,27 @@ export const createResult = async (req, res) => {
     return res.status(500).json({ error: "Internal server error." });
   }
 };
+
+let timerState = {
+  phase: "submission",
+  remainingTime: 60,
+};
+
+// Start the global timer
+setInterval(() => {
+  if (timerState.remainingTime > 0) {
+    timerState.remainingTime -= 1;
+  } else {
+    if (timerState.phase === "submission") {
+      timerState.phase = "results";
+      timerState.remainingTime = 60;
+    } else if (timerState.phase === "results") {
+      timerState.phase = "submission";
+      timerState.remainingTime = 60;
+    }
+  }
+}, 1000);
+
+export const getTimer = async (req, res) => {
+  res.json(timerState);
+};
